@@ -1,21 +1,49 @@
 import discord
-from discord import app_commands
+from discord.ext import commands, tasks
 from config import PREFIX, BOT_TOKEN  # Sensitive content!
+from random import choice
+import asyncio
+import datetime
 
-intents = discord.Intents.default()
-intents.message_content = True
-client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix=PREFIX, intents=intents)
+
+possible_statuses = [
+    "Stalking the Stalker...",
+    "Rerolling riven mods",
+    "/unstuck simulator",
+    "Hey, Kiddo.",
+    "Cleaning up after your Kubrow",
+    "Being Ordis's friend <3",
+    "Farming Simulator 3025",
+    "Having the Party of Your Lifetime",
+    "ERR;[-=,TECHROT CORRUPTION DETECTED",
+    "I am sad to report that all my good jokes Argon.",
+    "where baro?",
+    "how is baro?",
+    "Off-Lyne :(",
+]
 
 
-@client.event
+@tasks.loop(seconds=5)
+async def change_bot_status():
+    status = str(choice(possible_statuses))
+    if status == "Hey, Kiddo.":
+        change_bot_status.change_interval(seconds=60)
+    else:
+        change_bot_status.change_interval(seconds=600)
+    await bot.change_presence(activity=discord.CustomActivity(status))
+
+
+@bot.event
 async def on_ready():
-    print(f"Logged in as {client.user}!")
+    print(f"Logged in as {bot.user}!")
+    change_bot_status.start()
 
 
-@client.event
+@bot.event
 async def on_message(message):
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
     content = message.content
@@ -24,9 +52,8 @@ async def on_message(message):
         await message.channel.send("Test complete.")
 
 
-def main():
-    client.run(BOT_TOKEN)
+async def main():
+    await bot.start(BOT_TOKEN)
 
 
-if __name__ == "__main__":
-    main()
+asyncio.run(main())
