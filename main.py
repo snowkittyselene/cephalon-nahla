@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands, tasks
-from config import PREFIX, BOT_TOKEN  # Sensitive content!
+
+# Token and prefix in a separate config.py file, untracked for token purposes
+from config import PREFIX, BOT_TOKEN
 from random import choice
 import asyncio
 import datetime
