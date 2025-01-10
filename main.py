@@ -2,11 +2,12 @@ import discord
 from discord.ext import commands, tasks
 
 # Token and prefix in a separate config.py file, untracked for token purposes
-from config import PREFIX, BOT_TOKEN
+from config import PREFIX, BOT_TOKEN, AUTHOR_ID
 from assets import IMAGES
 from random import choice
 import asyncio
 import aiohttp
+import os
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=PREFIX, intents=intents)
@@ -76,8 +77,26 @@ async def ping(ctx):
     await ctx.send(embed=ping_embed)
 
 
+@bot.command()
+async def shutdown(ctx):
+    if ctx.author.id != AUTHOR_ID:
+        await ctx.send("Sorry, only the bot creator can use this command.")
+    else:
+        await ctx.send("Shutting down...")
+        print("Closing!")
+        await bot.close()
+
+
 async def main():
-    await bot.start(BOT_TOKEN)
+    async with bot:
+        await load()
+        await bot.start(BOT_TOKEN)
+
+
+async def load():
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py"):
+            await bot.load_extension(f"cogs.{filename[:-3]}")
 
 
 asyncio.run(main())
