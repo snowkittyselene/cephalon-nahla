@@ -87,27 +87,6 @@ async def shutdown(ctx):
         await bot.close()
 
 
-"""
-@bot.command(name="bot_help")
-async def bot_help(ctx):
-    embed = discord.Embed(
-        title="Cephalon Nahla Commands",
-        description=f"Use {PREFIX} before the commands.",
-        color=discord.Color(0xFFD1DC),
-    )
-    embed.add_field(name="Note", value="Slash commands to be added soon", inline=False)
-    embed.add_field(name="test", value="Prints a test message", inline=False)
-    embed.add_field(name="embed", value="Creates a test embed", inline=False)
-    embed.add_field(name="ping", value="Shows your ping to the bot", inline=False)
-    embed.add_field(
-        name="shutdown",
-        value="Shuts down the bot if your ID is in the whitelist",
-        inline=False,
-    )
-    await ctx.send(embed=embed)
-"""
-
-
 async def main():
     async with bot:
         await load()
