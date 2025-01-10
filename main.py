@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands, tasks
 
 # Token and prefix in a separate config.py file, untracked for token purposes
-from config import PREFIX, BOT_TOKEN, AUTHOR_ID
+from config import PREFIX, BOT_TOKEN, SHUTDOWN_IDS
 from assets import IMAGES
 from random import choice
 import asyncio
@@ -59,7 +59,7 @@ async def test_embed(
     )
     embed_msg.set_thumbnail(url=IMAGES["LOTUS"])
     embed_msg.add_field(name="Test field name", value="Test field value", inline=False)
-    embed_msg.add_field(name="Server picture", value="val", inline=False)
+    embed_msg.add_field(name="Server picture", value=None, inline=False)
     embed_msg.set_image(url=ctx.guild.icon)
     embed_msg.set_footer(
         text="Finally, a footer. Here's your pfp :3", icon_url=ctx.author.avatar
@@ -79,12 +79,33 @@ async def ping(ctx):
 
 @bot.command()
 async def shutdown(ctx):
-    if ctx.author.id != AUTHOR_ID:
+    if ctx.author.id not in SHUTDOWN_IDS:
         await ctx.send("Sorry, only the bot creator can use this command.")
     else:
         await ctx.send("Shutting down...")
         print("Closing!")
         await bot.close()
+
+
+"""
+@bot.command(name="bot_help")
+async def bot_help(ctx):
+    embed = discord.Embed(
+        title="Cephalon Nahla Commands",
+        description=f"Use {PREFIX} before the commands.",
+        color=discord.Color(0xFFD1DC),
+    )
+    embed.add_field(name="Note", value="Slash commands to be added soon", inline=False)
+    embed.add_field(name="test", value="Prints a test message", inline=False)
+    embed.add_field(name="embed", value="Creates a test embed", inline=False)
+    embed.add_field(name="ping", value="Shows your ping to the bot", inline=False)
+    embed.add_field(
+        name="shutdown",
+        value="Shuts down the bot if your ID is in the whitelist",
+        inline=False,
+    )
+    await ctx.send(embed=embed)
+"""
 
 
 async def main():
