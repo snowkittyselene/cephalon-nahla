@@ -6,7 +6,6 @@ from config import PREFIX, BOT_TOKEN, SHUTDOWN_IDS
 from assets import IMAGES
 from random import choice
 import asyncio
-import aiohttp
 import os
 
 intents = discord.Intents.all()
@@ -80,11 +79,20 @@ async def ping(ctx):
 @bot.command()
 async def shutdown(ctx):
     if ctx.author.id not in SHUTDOWN_IDS:
-        await ctx.send("Sorry, only the bot creator can use this command.")
+        await ctx.send("Sorry, only authorised users can use this command.")
     else:
         await ctx.send("Shutting down...")
         print("Closing!")
         await bot.close()
+
+
+@bot.command()
+async def reload_cog(ctx, cog_name):
+    if ctx.author.id not in SHUTDOWN_IDS:
+        await ctx.send("Sorry, only authorised users can use this.")
+    else:
+        await ctx.send(f"Restarting {cog_name}...")
+        await bot.reload_extension(f"cogs.{cog_name}")
 
 
 async def main():
