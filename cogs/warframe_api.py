@@ -47,7 +47,7 @@ class WarframeAPI(commands.Cog):
         emb.set_footer(text=f"Void Trader leaving in {api_data["endString"]}")
         for item in inventory:
             emb.description += (
-                f"{item[0]}: {item[1]} {DUCATS} and {item[2]} {CREDITS}\n"
+                f"{item[0]}: {item[1]} {DUCATS} and {item[2]:,} {CREDITS}\n"
             )
         await ctx.send(embed=emb)
 
