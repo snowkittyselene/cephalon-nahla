@@ -1,7 +1,12 @@
 import discord
 from discord.ext import commands
+from discord.ui import Button, View
+from asyncio import TimeoutError
 import requests
 
+BACK_BUTTON = Button(label="Previous", custom_id="previous")
+NEXT_BUTTON = Button(label="Next", custom_id="next")
+ITEMS_PER_PAGE = 10
 DUCATS = "<:wf_ducats:1327770728917110874>"
 CREDITS = "<:wf_credits:1327770773158363267>"
 
@@ -31,6 +36,7 @@ class WarframeAPI(commands.Cog):
     async def baro(self, ctx):
         response = pull_from_api("voidTrader")
         api_data = response.json()
+        start = 0
         if not api_data["active"]:
             await ctx.send(
                 f"I'm so sorry, Tenno, but Baro Ki'Teer is currently ~~pregnant~~ scouring the Void for hidden treasures. He will be due to arrive at {api_data["location"]} in approximately {api_data["startString"]}"
@@ -38,18 +44,71 @@ class WarframeAPI(commands.Cog):
             return
         inventory = []
         for item in api_data["inventory"]:
-            inventory.append([item["item"], item["ducats"], item["credits"]])
-        emb = discord.Embed(
-            title=f"Void Trader surfaced at {api_data["location"]}",
-            description="Baro's Inventory:\n",
-        )
-        emb.set_author(name="The wait is over, Tenno! Baro Ki'Teer has arrived...")
-        emb.set_footer(text=f"Void Trader leaving in {api_data["endString"]}")
-        for item in inventory:
-            emb.description += (
-                f"{item[0]}: {item[1]} {DUCATS} and {item[2]:,} {CREDITS}\n"
+            ducat_value, credit_value = 0, 0
+            if item["credits"] is not None:
+                credit_value = item["credits"]
+            if item["ducats"] is not None:
+                ducat_value = item["ducats"]
+            inventory.append([item["item"], ducat_value, credit_value])
+        is_one_page = len(inventory) <= ITEMS_PER_PAGE
+        data = (api_data["location"], api_data["endString"])
+        embed = await generate_base(start, inventory, data)
+        view = View()
+
+        if not is_one_page:
+            view.add_item(NEXT_BUTTON)
+
+        message = await ctx.send(embed=embed, view=view)
+
+        if is_one_page:
+            return
+
+        def check(interaction):
+            return (
+                interaction.user == ctx.author and interaction.message.id == message.id
             )
-        await ctx.send(embed=emb)
+
+        while True:
+            try:
+                interaction = await ctx.bot.wait_for(
+                    "interaction", check=check, timeout=25.0
+                )
+                if interaction.data["custom_id"] == "previous":
+                    start -= ITEMS_PER_PAGE
+                elif interaction.data["custom_id"] == "next":
+                    start += ITEMS_PER_PAGE
+                embed = await generate_base(start, inventory, data)
+
+                view.clear_items()
+                if start > 0:
+                    view.add_item(BACK_BUTTON)
+                if start + ITEMS_PER_PAGE < len(inventory):
+                    view.add_item(NEXT_BUTTON)
+
+                await interaction.response.edit_message(embed=embed, view=view)
+            except TimeoutError:
+                view.clear_items()
+                await message.edit(embed=embed, view=view)
+                break
+
+
+async def generate_base(start, inventory, info):
+    current_page_inv = inventory[start : start + ITEMS_PER_PAGE]
+    current_page = (start // ITEMS_PER_PAGE) + 1
+    total_pages = (len(inventory) // ITEMS_PER_PAGE) + 1
+    embed = discord.Embed(
+        title=f"Void Trader surfaced at {info[0]}",
+        description=f"Baro's inventory, page {current_page} of {total_pages}",
+    )
+    embed.set_author(name="The wait is over, Tenno! Baro Ki'Teer has arrived~")
+    embed.set_footer(text=f"Void Trader leaving in {info[1]}")
+    for item in current_page_inv:
+        embed.add_field(
+            name=item[0],
+            value=f"{item[1]} {DUCATS} and {item[2]:,} {CREDITS}",
+            inline=False,
+        )
+    return embed
 
 
 def pull_from_api(section=None):
