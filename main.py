@@ -42,11 +42,36 @@ async def change_bot_status():
 async def on_ready():
     print(f"Logged in as {bot.user}!")
     change_bot_status.start()
+    try:
+        synced_commands = await bot.tree.sync()
+        print(f"Synced {len(synced_commands)} commands")
+    except Exception as e:
+        print(f"Error while syncing commands: {e}")
 
 
-@bot.command()
-async def test(ctx):
-    await ctx.send(f"Hey {ctx.author.mention}, your test worked!")
+@bot.tree.command(
+    name="resync_commands",
+    description="Re-sync the commands. Usable only by authorised people.",
+)
+async def resync_commands(interaction: discord.Interaction):
+    if interaction.user.id not in SHUTDOWN_IDS:
+        await interaction.response.send_message(
+            f"Only authorised users can use this command."
+        )
+    try:
+        synced_commands = await bot.tree.sync()
+        await interaction.response.send_message(
+            f"Synced {len(synced_commands)} commands"
+        )
+    except Exception as e:
+        print(f"Error while syncing commands: {e}")
+
+
+@bot.tree.command(name="test", description="Pings the user")
+async def test(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        f"Hey {interaction.user.mention}, your test worked!"
+    )
 
 
 @bot.command(name="embed")
