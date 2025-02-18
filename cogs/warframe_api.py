@@ -1,4 +1,5 @@
 import discord
+from discord import app_commands as ac
 from discord.ext import commands
 from discord.ui import Button, View
 from asyncio import TimeoutError
@@ -32,13 +33,16 @@ class WarframeAPI(commands.Cog):
             f"Tenno. Today's sortie is an attack on the {faction}, currently led by {boss}"
         )
 
-    @commands.command()
-    async def baro(self, ctx):
+    @ac.command(
+        name="baro",
+        description="Shows Baro Ki'Teer's current inventory or when he's next due",
+    )
+    async def baro(self, original_interaction: discord.Interaction):
         response = pull_from_api("voidTrader")
         api_data = response.json()
         start = 0
         if not api_data["active"]:
-            await ctx.send(
+            await original_interaction.response.send_message(
                 f"I'm so sorry, Tenno, but Baro Ki'Teer is currently ~~pregnant~~ scouring the Void for hidden treasures. He will be due to arrive at {api_data["location"]} in approximately {api_data["startString"]}"
             )
             return
@@ -58,19 +62,22 @@ class WarframeAPI(commands.Cog):
         if not is_one_page:
             view.add_item(NEXT_BUTTON)
 
-        message = await ctx.send(embed=embed, view=view)
+        message = await original_interaction.response.send_message(
+            embed=embed, view=view
+        )
 
         if is_one_page:
             return
 
         def check(interaction):
             return (
-                interaction.user == ctx.author and interaction.message.id == message.id
+                interaction.user == original_interaction.user
+                and interaction.message.id == message.id
             )
 
         while True:
             try:
-                interaction = await ctx.bot.wait_for(
+                interaction = await self.bot.wait_for(
                     "interaction", check=check, timeout=25.0
                 )
                 if interaction.data["custom_id"] == "previous":
