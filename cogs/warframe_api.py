@@ -19,6 +19,7 @@ class WarframeAPI(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         print(f"{__name__} cog loaded!")
+        self.add_view()
 
     @commands.command(name="testpull")
     async def test_api_pull(self, ctx: commands.Context):
@@ -57,46 +58,10 @@ class WarframeAPI(commands.Cog):
         is_one_page = len(inventory) <= ITEMS_PER_PAGE
         data = (api_data["location"], api_data["endString"])
         embed = await generate_base(start, inventory, data)
-        view = View()
-
-        if not is_one_page:
-            view.add_item(NEXT_BUTTON)
-
-        message = await original_interaction.response.send_message(
-            embed=embed, view=view
-        )
-
+        view = PaginationView(inventory, data, ITEMS_PER_PAGE, 30, generate_base)
         if is_one_page:
-            return
-
-        def check(interaction):
-            return (
-                interaction.user == original_interaction.user
-                and interaction.message.id == message.id
-            )
-
-        while True:
-            try:
-                interaction = await self.bot.wait_for(
-                    "interaction", check=check, timeout=25.0
-                )
-                if interaction.data["custom_id"] == "previous":
-                    start -= ITEMS_PER_PAGE
-                elif interaction.data["custom_id"] == "next":
-                    start += ITEMS_PER_PAGE
-                embed = await generate_base(start, inventory, data)
-
-                view.clear_items()
-                if start > 0:
-                    view.add_item(BACK_BUTTON)
-                if start + ITEMS_PER_PAGE < len(inventory):
-                    view.add_item(NEXT_BUTTON)
-
-                await interaction.response.edit_message(embed=embed, view=view)
-            except TimeoutError:
-                view.clear_items()
-                await message.edit(embed=embed, view=view)
-                break
+            view.clear_items()
+        await original_interaction.response.send_message(embed=embed, view=view)
 
 
 async def generate_base(start, inventory, info):
@@ -127,3 +92,48 @@ def pull_from_api(section=None):
 
 async def setup(bot):
     await bot.add_cog(WarframeAPI(bot))
+
+
+class PaginationView(discord.ui.View):
+    def __init__(self, items, info, items_per_page, timeout, generate_base):
+        super().__init__(timeout=timeout)
+        self.start = 0
+        self.items = items
+        self.info = info
+        self.items_per_page = items_per_page
+        self.embed, self.message = None, None
+        self.generate_base = generate_base
+
+    def update_buttons(self):
+        if self.start == 0:
+            self.children[0].disabled = True
+        elif self.start + self.items_per_page >= len(self.items):
+            self.children[1].disabled = True
+        else:
+            self.children[0].disabled = False
+            self.children[1].disabled = False
+
+    async def on_timeout(self):
+        self.clear_items()
+        await self.message.edit(embed=self.embed, view=self)
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.gray, disabled=True)
+    async def prev_page(self, ctx: discord.Interaction, btn: discord.ui.Button):
+        await ctx.response.defer()
+        self.start -= self.items_per_page
+        self.start = 0 if self.start < 0 else self.start
+        self.embed = await self.generate_base(self.start, self.items, self.info)
+        self.update_buttons()
+        self.message = await ctx.message.edit(embed=self.embed, view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.gray)
+    async def next_page(self, ctx: discord.Interaction, btn: discord.ui.Button):
+        await ctx.response.defer()
+        self.start = (
+            self.start + self.items_per_page
+            if self.start + self.items_per_page < len(self.items)
+            else self.start
+        )
+        self.embed = await self.generate_base(self.start, self.items, self.info)
+        self.update_buttons()
+        self.message = await ctx.message.edit(embed=self.embed, view=self)
