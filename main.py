@@ -3,7 +3,6 @@ from discord.ext import commands, tasks
 
 # Token and prefix in a separate config.py file, untracked for token purposes
 from config import PREFIX, BOT_TOKEN, SHUTDOWN_IDS, DEV_GUILD_ID
-from assets import IMAGES
 from random import choice
 import asyncio
 import os
