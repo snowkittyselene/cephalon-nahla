@@ -37,7 +37,7 @@ class WarframeAPI(commands.Cog):
         description="Shows Baro Ki'Teer's current inventory or when he's next due",
     )
     async def baro(self, original_interaction: discord.Interaction):
-        response = pull_from_api("vaultTrader")
+        response = pull_from_api("voidTrader")
         api_data = response.json()
         start = 0
         if not api_data["active"]:
