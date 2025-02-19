@@ -84,32 +84,6 @@ async def resync_commands(ctx):
         print(f"Error while syncing commands: {e}")
 
 
-@bot.tree.command(name="test", description="Pings the user")
-async def test(interaction: discord.Interaction):
-    await interaction.response.send_message(
-        f"Hey {interaction.user.mention}, your test worked!"
-    )
-
-
-@bot.tree.command(name="embed_test", description="Prints a test embed")
-async def test_embed(
-    interaction: discord.Interaction,
-    title: str = "Title of embed",
-    desc: str = "Description of embed",
-):
-    embed_msg = discord.Embed(
-        title=title, description=desc, color=discord.Colour(0xFFD1DC)
-    )
-    embed_msg.set_thumbnail(url=IMAGES["LOTUS"])
-    embed_msg.add_field(name="Test field name", value="Test field value", inline=False)
-    embed_msg.add_field(name="Server picture", value=None, inline=False)
-    embed_msg.set_image(url=interaction.guild.icon)
-    embed_msg.set_footer(
-        text="Finally, a footer. Here's your pfp :3", icon_url=interaction.user.avatar
-    )
-    await interaction.response.send_message(embed=embed_msg, ephemeral=True)
-
-
 @bot.tree.command(name="ping", description="Shows your ping")
 async def ping(interaction: discord.Interaction):
     ping_embed = discord.Embed(title="Ping", description="Latency in ms")

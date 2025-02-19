@@ -19,19 +19,6 @@ class WarframeAPI(commands.Cog):
         print(f"{__name__} cog loaded!")
         self.add_view()
 
-    @commands.command(name="testpull")
-    async def test_api_pull(self, ctx: commands.Context):
-        response = pull_from_api("sortie")
-        api_data = response.json()
-        if "error" in api_data:
-            await ctx.send(f"Error {api_data["code"]} occurred: {api_data["error"]}")
-            return
-        faction = api_data["faction"]
-        boss = api_data["boss"]
-        await ctx.send(
-            f"Tenno. Today's sortie is an attack on the {faction}, currently led by {boss}"
-        )
-
     @ac.command(
         name="baro",
         description="Shows Baro Ki'Teer's current inventory or when he's next due",
