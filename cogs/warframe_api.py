@@ -1,11 +1,10 @@
 import discord
+from discord import app_commands as ac
 from discord.ext import commands
-from discord.ui import Button, View
-from asyncio import TimeoutError
+from utils import PaginationView
 import requests
 
-BACK_BUTTON = Button(label="Previous", custom_id="previous")
-NEXT_BUTTON = Button(label="Next", custom_id="next")
+
 ITEMS_PER_PAGE = 10
 DUCATS = "<:wf_ducats:1327770728917110874>"
 CREDITS = "<:wf_credits:1327770773158363267>"
@@ -18,6 +17,7 @@ class WarframeAPI(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         print(f"{__name__} cog loaded!")
+        self.add_view()
 
     @commands.command(name="testpull")
     async def test_api_pull(self, ctx: commands.Context):
@@ -32,13 +32,16 @@ class WarframeAPI(commands.Cog):
             f"Tenno. Today's sortie is an attack on the {faction}, currently led by {boss}"
         )
 
-    @commands.command()
-    async def baro(self, ctx):
+    @ac.command(
+        name="baro",
+        description="Shows Baro Ki'Teer's current inventory or when he's next due",
+    )
+    async def baro(self, original_interaction: discord.Interaction):
         response = pull_from_api("voidTrader")
         api_data = response.json()
         start = 0
         if not api_data["active"]:
-            await ctx.send(
+            await original_interaction.response.send_message(
                 f"I'm so sorry, Tenno, but Baro Ki'Teer is currently ~~pregnant~~ scouring the Void for hidden treasures. He will be due to arrive at {api_data["location"]} in approximately {api_data["startString"]}"
             )
             return
@@ -53,43 +56,10 @@ class WarframeAPI(commands.Cog):
         is_one_page = len(inventory) <= ITEMS_PER_PAGE
         data = (api_data["location"], api_data["endString"])
         embed = await generate_base(start, inventory, data)
-        view = View()
-
-        if not is_one_page:
-            view.add_item(NEXT_BUTTON)
-
-        message = await ctx.send(embed=embed, view=view)
-
+        view = PaginationView(inventory, data, ITEMS_PER_PAGE, 30, generate_base)
         if is_one_page:
-            return
-
-        def check(interaction):
-            return (
-                interaction.user == ctx.author and interaction.message.id == message.id
-            )
-
-        while True:
-            try:
-                interaction = await ctx.bot.wait_for(
-                    "interaction", check=check, timeout=25.0
-                )
-                if interaction.data["custom_id"] == "previous":
-                    start -= ITEMS_PER_PAGE
-                elif interaction.data["custom_id"] == "next":
-                    start += ITEMS_PER_PAGE
-                embed = await generate_base(start, inventory, data)
-
-                view.clear_items()
-                if start > 0:
-                    view.add_item(BACK_BUTTON)
-                if start + ITEMS_PER_PAGE < len(inventory):
-                    view.add_item(NEXT_BUTTON)
-
-                await interaction.response.edit_message(embed=embed, view=view)
-            except TimeoutError:
-                view.clear_items()
-                await message.edit(embed=embed, view=view)
-                break
+            view.clear_items()
+        await original_interaction.response.send_message(embed=embed, view=view)
 
 
 async def generate_base(start, inventory, info):

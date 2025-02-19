@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands, tasks
 
 # Token and prefix in a separate config.py file, untracked for token purposes
-from config import PREFIX, BOT_TOKEN, SHUTDOWN_IDS
+from config import PREFIX, BOT_TOKEN, SHUTDOWN_IDS, DEV_GUILD_ID
 from assets import IMAGES
 from random import choice
 import asyncio
@@ -10,6 +10,7 @@ import os
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=PREFIX, intents=intents)
+dev_guild = None
 
 possible_statuses = [
     "Stalking the Stalker...",
@@ -40,18 +41,61 @@ async def change_bot_status():
 
 @bot.event
 async def on_ready():
+    dev_guild = discord.utils.get(bot.guilds, id=DEV_GUILD_ID)
+    if dev_guild is None:
+        print("Couldn't find dev guild. Shutting down.")
+        return
     print(f"Logged in as {bot.user}!")
     change_bot_status.start()
 
 
-@bot.command()
-async def test(ctx):
-    await ctx.send(f"Hey {ctx.author.mention}, your test worked!")
+@bot.tree.command(
+    name="resync_commands",
+    description="Re-sync the commands. Usable only by authorised people.",
+    guild=dev_guild,
+)
+async def resync_commands(ctx: discord.Interaction):
+    if ctx.user.id not in SHUTDOWN_IDS:
+        await ctx.response.send_message(
+            f"Only authorised users can use this command.", ephemeral=True
+        )
+        return
+    try:
+        synced_commands = await bot.tree.sync()
+        await ctx.response.send_message(
+            f"Synced {len(synced_commands)} commands", ephemeral=True
+        )
+    except Exception as e:
+        print(f"Error while syncing commands: {e}")
 
 
-@bot.command(name="embed")
+@bot.command(
+    name="resync_commands",
+    description="Re-sync the commands. Usable only by authorised people.",
+)
+async def resync_commands(ctx):
+    if ctx.author.id not in SHUTDOWN_IDS:
+        await ctx.send(f"Only authorised users can use this command.", ephemeral=True)
+        return
+    try:
+        synced_commands = await bot.tree.sync()
+        await ctx.send(f"Synced {len(synced_commands)} commands", ephemeral=True)
+    except Exception as e:
+        print(f"Error while syncing commands: {e}")
+
+
+@bot.tree.command(name="test", description="Pings the user")
+async def test(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        f"Hey {interaction.user.mention}, your test worked!"
+    )
+
+
+@bot.tree.command(name="embed_test", description="Prints a test embed")
 async def test_embed(
-    ctx, title: str = "Title of embed", desc: str = "Description of embed"
+    interaction: discord.Interaction,
+    title: str = "Title of embed",
+    desc: str = "Description of embed",
 ):
     embed_msg = discord.Embed(
         title=title, description=desc, color=discord.Colour(0xFFD1DC)
@@ -59,39 +103,53 @@ async def test_embed(
     embed_msg.set_thumbnail(url=IMAGES["LOTUS"])
     embed_msg.add_field(name="Test field name", value="Test field value", inline=False)
     embed_msg.add_field(name="Server picture", value=None, inline=False)
-    embed_msg.set_image(url=ctx.guild.icon)
+    embed_msg.set_image(url=interaction.guild.icon)
     embed_msg.set_footer(
-        text="Finally, a footer. Here's your pfp :3", icon_url=ctx.author.avatar
+        text="Finally, a footer. Here's your pfp :3", icon_url=interaction.user.avatar
     )
-    await ctx.send(embed=embed_msg)
+    await interaction.response.send_message(embed=embed_msg, ephemeral=True)
 
 
-@bot.command()
-async def ping(ctx):
+@bot.tree.command(name="ping", description="Shows your ping")
+async def ping(interaction: discord.Interaction):
     ping_embed = discord.Embed(title="Ping", description="Latency in ms")
     ping_embed.add_field(
         name=f"{bot.user.name}'s latency", value=f"{round(bot.latency * 1000)}ms"
     )
-    ping_embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar)
-    await ctx.send(embed=ping_embed)
+    ping_embed.set_author(
+        name=interaction.user.display_name, icon_url=interaction.user.avatar
+    )
+    await interaction.response.send_message(embed=ping_embed, ephemeral=True)
 
 
-@bot.command()
-async def shutdown(ctx):
-    if ctx.author.id not in SHUTDOWN_IDS:
-        await ctx.send("Sorry, only authorised users can use this command.")
+@bot.tree.command(
+    name="shutdown",
+    description="Shuts down the bot. Usable only by authorised users.",
+    guild=dev_guild,
+)
+async def shutdown(ctx: discord.Interaction):
+    if ctx.user.id not in SHUTDOWN_IDS:
+        await ctx.response.send_message(
+            "Sorry, only authorised users can use this command.", ephemeral=True
+        )
     else:
-        await ctx.send("Shutting down...")
+        await ctx.response.send_message("Shutting down...")
         print("Closing!")
         await bot.close()
 
 
-@bot.command()
-async def reload_cog(ctx, cog_name):
-    if ctx.author.id not in SHUTDOWN_IDS:
-        await ctx.send("Sorry, only authorised users can use this.")
+@bot.tree.command(
+    name="reload_cog",
+    description="Reloads a specified cog. Usable only by authorised users",
+    guild=dev_guild,
+)
+async def reload_cog(ctx: discord.Interaction, cog_name: str):
+    if ctx.user.id not in SHUTDOWN_IDS:
+        await ctx.response.send_message(
+            "Sorry, only authorised users can use this.", ephemeral=True
+        )
     else:
-        await ctx.send(f"Restarting {cog_name}...")
+        await ctx.response.send_message(f"Restarting {cog_name}...", ephemeral=True)
         await bot.reload_extension(f"cogs.{cog_name}")
 
 
