@@ -8,6 +8,7 @@ import requests
 ITEMS_PER_PAGE = 10
 DUCATS = "<:wf_ducats:1327770728917110874>"
 CREDITS = "<:wf_credits:1327770773158363267>"
+STEEL_ESSENCE = "<:wf_steel_essence:1342258895858438365>"
 
 
 class WarframeAPI(commands.Cog):
@@ -120,6 +121,28 @@ class WarframeAPI(commands.Cog):
 
         await ctx.response.send_message(embed=embed)
 
+    @ac.command(
+        name="steelpath",
+        description="Gets the current Teshin shop rotation for Steel Path",
+    )
+    async def steelpath(self, ctx):
+        steel_path_response = pull_from_api("steelPath")
+        steel_path_data = steel_path_response.json()
+        rotation = discord.Embed(
+            title="Teshin's Shop",
+            description=f"Stock rotates in {steel_path_data['remaining']}",
+        )
+        for item in steel_path_data["rotation"]:
+            rotation.add_field(
+                name=item["name"], value=f"{item['cost']} {STEEL_ESSENCE}", inline=False
+            )
+        evergreens = discord.Embed(title="Teshin's Shop", description="Permanent stock")
+        for item in steel_path_data["evergreens"]:
+            evergreens.add_field(
+                name=item["name"], value=f"{item['cost']} {STEEL_ESSENCE}", inline=False
+            )
+        await ctx.response.send_message(embeds=[rotation, evergreens])
+
 
 async def generate_base(start, inventory, info):
     current_page_inv = inventory[start : start + ITEMS_PER_PAGE]
@@ -134,7 +157,7 @@ async def generate_base(start, inventory, info):
     for item in current_page_inv:
         embed.add_field(
             name=item[0],
-            value=f"{item[1]} {DUCATS} and {item[2]:,} {CREDITS}",
+            value=f"{item[1]} {DUCATS} and {item[2]} {CREDITS}",
             inline=False,
         )
     return embed
