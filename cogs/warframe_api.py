@@ -132,10 +132,10 @@ class WarframeAPI(commands.Cog):
             title="Teshin's Shop",
             description=f"Stock rotates in {steel_path_data['remaining']}",
         )
-        for item in steel_path_data["rotation"]:
-            rotation.add_field(
-                name=item["name"], value=f"{item['cost']} {STEEL_ESSENCE}", inline=False
-            )
+        item = steel_path_data["currentReward"]
+        rotation.add_field(
+            name=item["name"], value=f"{item['cost']} {STEEL_ESSENCE}", inline=False
+        )
         evergreens = discord.Embed(title="Teshin's Shop", description="Permanent stock")
         for item in steel_path_data["evergreens"]:
             evergreens.add_field(
