@@ -3,12 +3,10 @@ from discord import app_commands as ac
 from discord.ext import commands
 from utils import PaginationView
 import requests
+from config import DUCATS, CREDITS, STEEL_ESSENCE
 
 
 ITEMS_PER_PAGE = 10
-DUCATS = "<:wf_ducats:1327770728917110874>"
-CREDITS = "<:wf_credits:1327770773158363267>"
-STEEL_ESSENCE = "<:wf_steel_essence:1342258895858438365>"
 
 
 class WarframeAPI(commands.Cog):
